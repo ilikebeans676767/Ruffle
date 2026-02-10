@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Game Library</title>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-library {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+        }
+
+        .game-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .game-card p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .last-played {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            margin-top: 8px;
+        }
+
+        .player-container {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .player-container.active {
+            display: block;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .player-header h2 {
+            color: #333;
+            font-size: 1.8em;
+        }
+
+        .back-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .back-button:hover {
+            background: #5568d3;
+        }
+
+        #ruffle-container {
+            width: 100%;
+            height: 600px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        ruffle-player {
+            width: 100%;
+            height: 100%;
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Flash Game Library</h1>
+
+        <div class="instructions">
+            <h3>📝 Instructions:</h3>
+            <p>1. Click on any game to play it</p>
+            <p>2. Your progress is automatically saved locally</p>
+            <p>3. Replace the SWF file paths below with your actual game files</p>
+        </div>
+
+        <div id="library-view">
+            <div class="game-library" id="game-list">
+                <!-- Games will be loaded here -->
+            </div>
+        </div>
+
+        <div id="player-view" class="player-container">
+            <div class="player-header">
+                <h2 id="current-game-title">Game Title</h2>
+                <button class="back-button" onclick="backToLibrary()">← Back to Library</button>
+            </div>
+            <div id="ruffle-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Game library - Replace these paths with your actual SWF files
+        const games = [
+            {
+                id: 'game1',
+                title: 'Super Flash Bros',
+                description: 'Classic platformer game',
+                swfPath: 'games/super-flash-bros.swf'
+            },
+            {
+                id: 'game2',
+                title: 'Flash Racing',
+                description: 'High-speed racing action',
+                swfPath: 'games/flash-racing.swf'
+            },
+            {
+                id: 'game3',
+                title: 'Tower Defense Pro',
+                description: 'Strategic tower defense',
+                swfPath: 'games/tower-defense.swf'
+            },
+            {
+                id: 'game4',
+                title: 'Puzzle Master',
+                description: 'Mind-bending puzzles',
+                swfPath: 'games/puzzle-master.swf'
+            },
+            {
+                id: 'game5',
+                title: 'Adventure Quest',
+                description: 'Epic adventure RPG',
+                swfPath: 'games/adventure-quest.swf'
+            },
+            {
+                id: 'game6',
+                title: 'Space Shooter',
+                description: 'Intense space combat',
+                swfPath: 'games/space-shooter.swf'
+            }
+        ];
+
+        let currentPlayer = null;
+
+        // Load game library
+        function loadGameLibrary() {
+            const gameList = document.getElementById('game-list');
+            const playHistory = JSON.parse(localStorage.getItem('playHistory') || '{}');
+            
+            gameList.innerHTML = '';
+            
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.onclick = () => playGame(game);
+                
+                let lastPlayedHTML = '';
+                if (playHistory[game.id]) {
+                    const lastPlayed = new Date(playHistory[game.id]);
+                    lastPlayedHTML = `<span class="last-played">Last played: ${lastPlayed.toLocaleDateString()}</span>`;
+                }
+                
+                card.innerHTML = `
+                    <h3>${game.title}</h3>
+                    <p>${game.description}</p>
+                    ${lastPlayedHTML}
+                `;
+                
+                gameList.appendChild(card);
+            });
+        }
+
+        // Play a game
+        function playGame(game) {
+            // Update play history
+            const playHistory = JSON.parse(localStorage.getItem('playHistory') || '{}');
+            playHistory[game.id] = new Date().toISOString();
+            localStorage.setItem('playHistory', JSON.stringify(playHistory));
+
+            // Store current game
+            localStorage.setItem('currentGame', game.id);
+
+            // Show player view
+            document.getElementById('library-view').style.display = 'none';
+            document.getElementById('player-view').classList.add('active');
+            document.getElementById('current-game-title').textContent = game.title;
+
+            // Load the game in Ruffle
+            loadRuffleGame(game.swfPath);
+        }
+
+        // Load game in Ruffle
+        function loadRuffleGame(swfPath) {
+            const container = document.getElementById('ruffle-container');
+            
+            // Clear previous player
+            if (currentPlayer) {
+                container.innerHTML = '';
+            }
+
+            // Create new Ruffle player
+            const ruffle = window.RufflePlayer.newest();
+            currentPlayer = ruffle.createPlayer();
+            container.appendChild(currentPlayer);
+
+            // Load the SWF file
+            currentPlayer.load(swfPath).catch(err => {
+                console.error('Error loading SWF:', err);
+                alert('Error loading game. Make sure the SWF file path is correct: ' + swfPath);
+            });
+        }
+
+        // Back to library
+        function backToLibrary() {
+            document.getElementById('library-view').style.display = 'block';
+            document.getElementById('player-view').classList.remove('active');
+            
+            // Clear the player
+            const container = document.getElementById('ruffle-container');
+            container.innerHTML = '';
+            currentPlayer = null;
+
+            // Reload library to show updated last played times
+            loadGameLibrary();
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            loadGameLibrary();
+            
+            // Check if there was a current game in progress
+            const currentGame = localStorage.getItem('currentGame');
+            if (currentGame) {
+                console.log('Previous game session:', currentGame);
+                // You can optionally auto-resume the last game here
+            }
+        };
+
+        // Save state before page unload
+        window.addEventListener('beforeunload', function() {
+            // Ruffle automatically saves to localStorage
+            // Additional custom save logic can go here
+        });
+    </script>
+</body>
+</html>
