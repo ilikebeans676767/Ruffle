@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Game Library</title>
-    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2025.10.2/ruffle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -120,11 +120,14 @@
             background: #000;
             border-radius: 8px;
             overflow: hidden;
+            position: relative;
         }
 
         ruffle-player {
             width: 100%;
             height: 100%;
+            display: block;
+            background: black;
         }
 
         .instructions {
@@ -169,11 +172,13 @@
 
     <script>
         // Game library - Replace these paths with your actual SWF files
+        // You can use local paths like 'bloons5.swf' or full URLs like the example below:
+        // swfPath: 'https://cdn.jsdelivr.net/gh/bubbls/UGS-file-encryption@b6b363179429fc584fac223384f1b45cc419d1a7/WDzRSvadTXBNOR.swf'
         const games = [
             {
-                id: 'game1',
-                title: 'Super Flash Bros',
-                description: 'Classic platformer game',
+                id: 'bloons5',
+                title: 'Bloons Tower Defense 5',
+                description: 'Classic tower defense with monkeys',
                 swfPath: 'games/bloons5.swf'
             },
             {
@@ -266,16 +271,23 @@
                 container.innerHTML = '';
             }
 
-            // Create new Ruffle player
-            const ruffle = window.RufflePlayer.newest();
-            currentPlayer = ruffle.createPlayer();
-            container.appendChild(currentPlayer);
-
-            // Load the SWF file
-            currentPlayer.load(swfPath).catch(err => {
-                console.error('Error loading SWF:', err);
-                alert('Error loading game. Make sure the SWF file path is correct: ' + swfPath);
-            });
+            // Create new Ruffle player using the example's approach
+            const ruffle = window.RufflePlayer?.newest() || window.RufflePlayer?.createPlayer();
+            if (ruffle && container) {
+                currentPlayer = ruffle.createPlayer();
+                currentPlayer.style.width = "100%";
+                currentPlayer.style.height = "100%";
+                currentPlayer.style.background = "black";
+                container.appendChild(currentPlayer);
+                
+                // Load the SWF file
+                currentPlayer.load(swfPath).catch(err => {
+                    console.error('Error loading SWF:', err);
+                    container.textContent = `Error loading game. Make sure the SWF file exists: ${swfPath}`;
+                });
+            } else {
+                container.textContent = "Ruffle failed to load.";
+            }
         }
 
         // Back to library
